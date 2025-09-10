@@ -35,10 +35,4 @@ It provides separate dashboards for **admins** and **waiters**, handling tables,
 - **Database**: MySQL  
 - **Server**: XAMPP (Apache + PHP + MySQL)  
 
----
 
-## 🚀 Installation
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/zaka41a/CoffeApp.git
-   cd CoffeApp
