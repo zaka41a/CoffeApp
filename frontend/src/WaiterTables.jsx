@@ -1,3 +1,4 @@
+// src/pages/WaiterTables.jsx
 import React, { useEffect, useState } from "react";
 
 const API = "http://localhost/CoffeApp/backend/api";
@@ -11,17 +12,23 @@ export default function WaiterTables() {
 
   async function load() {
     try {
-      // liste de toutes les tables
+      // 1) liste de toutes les tables
       const r1 = await fetch(`${API}/tables.php`, { credentials: "include" });
       const list = await r1.json().catch(() => []);
       setTables(Array.isArray(list) ? list : []);
 
-      // récap commandes ouvertes par table
+      // 2) commandes "ouvertes" (l'API renvoie une ligne par commande)
       const r2 = await fetch(`${API}/orders.php?scope=open_tables`, { credentials: "include" });
       const rows = await r2.json().catch(() => []);
+
+      // 3) agréger par table -> somme des totaux + liste d'IDs
       const map = {};
       (Array.isArray(rows) ? rows : []).forEach(r => {
-        if (r.table_id) map[r.table_id] = { order_id: r.order_id, total: Number(r.total || 0) };
+        const tid = r.table_id;
+        if (!tid) return;
+        if (!map[tid]) map[tid] = { order_ids: [], total: 0 };
+        map[tid].order_ids.push(r.order_id);
+        map[tid].total += Number(r.total || 0);
       });
       setOpenMap(map);
     } catch {
@@ -29,9 +36,10 @@ export default function WaiterTables() {
       setOpenMap({});
     }
   }
+
   useEffect(() => { load(); }, []);
 
-  // Changer le statut (autorisé au serveur, mais sans créer/modifier la table)
+  // Changer le statut (free/occupied)
   async function toggleStatus(id, next) {
     const r = await fetch(`${API}/tables.php`, {
       method: "PATCH",
@@ -43,17 +51,33 @@ export default function WaiterTables() {
     if (d.ok) { t("Status updated."); load(); } else { t(d.error || "Error"); }
   }
 
-  // Clôturer l’addition et libérer la table
-  async function markFree(orderId) {
-    if (!orderId) return;
-    const r = await fetch(`${API}/orders.php?id=${orderId}`, {
-      method: "PATCH",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "paid" }),
-    });
-    const d = await r.json().catch(() => ({}));
-    if (d.ok) { t("Table marked free."); load(); } else { t(d.error || "Error"); }
+  // Clôturer toutes les commandes ouvertes d'une table
+  async function markFree(orderIds) {
+    const ids = Array.isArray(orderIds) ? orderIds : (orderIds ? [orderIds] : []);
+    if (ids.length === 0) return;
+
+    try {
+      const results = await Promise.all(
+        ids.map(id =>
+          fetch(`${API}/orders.php?id=${id}`, {
+            method: "PATCH",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "paid" }),
+          }).then(r => r.json().catch(() => ({})))
+        )
+      );
+
+      const ok = results.every(r => r && r.ok);
+      if (ok) {
+        t("Table marked free.");
+      } else {
+        t("Some bills failed to close.");
+      }
+      load();
+    } catch {
+      t("Error");
+    }
   }
 
   return (
@@ -73,6 +97,7 @@ export default function WaiterTables() {
                     {tb.status}
                   </span>
                 </div>
+
                 <div className="muted" style={{ marginTop: 4 }}>Seats: {tb.seats}</div>
 
                 {open ? (
@@ -80,8 +105,14 @@ export default function WaiterTables() {
                     <div style={{ marginTop: 10, fontWeight: 700 }}>
                       Open bill: {open.total.toFixed(2)} €
                     </div>
-                    <button className="btn primary" style={{ marginTop: 8 }}
-                            onClick={() => markFree(open.order_id)}>
+                    <div className="muted" style={{ marginTop: 4, fontSize: 12 }}>
+                      ({open.order_ids.length} order{open.order_ids.length > 1 ? "s" : ""} open)
+                    </div>
+                    <button
+                      className="btn primary"
+                      style={{ marginTop: 8 }}
+                      onClick={() => markFree(open.order_ids)}
+                    >
                       Close & mark free
                     </button>
                   </>
@@ -101,6 +132,7 @@ export default function WaiterTables() {
       </div>
 
       {tables.length === 0 && <p className="helper">No tables.</p>}
+
       {toast && (
         <div className="toast-wrap">
           <div className="toast">{toast}</div>

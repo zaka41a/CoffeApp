@@ -25,7 +25,9 @@ export default function Login({ onLoggedIn }) {
       const data = await r.json().catch(() => ({}));
       if (r.ok && (data.success || data.ok) && data.user) {
         onLoggedIn?.(data.user);
-        navigate(data.user.role === "admin" ? "/admin" : "/waiter", { replace: true });
+        navigate(data.user.role === "admin" ? "/admin" : "/waiter", {
+          replace: true,
+        });
       } else {
         setErr(data.message || data.error || "Login failed");
       }
@@ -41,8 +43,10 @@ export default function Login({ onLoggedIn }) {
       style={{
         minHeight: "100dvh",
         position: "relative",
-        display: "grid",
-        placeItems: "center",
+        display: "flex",              // utilisation de flexbox
+        alignItems: "center",         // centre verticalement
+        justifyContent: "flex-start", // colle à gauche
+        paddingLeft: "8%",            // marge depuis la gauche
         backgroundImage: "url('/img/back_home.jpg')",
         backgroundSize: "cover",
         backgroundPosition: "center",
@@ -164,7 +168,14 @@ export default function Login({ onLoggedIn }) {
           {loading ? "Signing in…" : "Sign in"}
         </button>
 
-        <div style={{ marginTop: 12, fontSize: 12, color: "#e7e7e7", textAlign: "center" }}>
+        <div
+          style={{
+            marginTop: 12,
+            fontSize: 12,
+            color: "#e7e7e7",
+            textAlign: "center",
+          }}
+        >
           © 2025 CoffeApp
         </div>
       </form>
