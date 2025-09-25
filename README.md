@@ -1,7 +1,7 @@
-# ☕ CoffeApp
+# ☕ CoffeeApp
 
 ## 📖 Overview
-CoffeApp is a full-stack web application designed to **manage café operations** efficiently.  
+CoffeeApp is a full-stack web application designed to **manage café operations** efficiently.  
 It provides separate dashboards for **admins** and **waiters**, handling tables, menus, and orders seamlessly.  
 
 ---
